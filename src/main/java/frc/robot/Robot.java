@@ -15,10 +15,15 @@ import com.revrobotics.spark.config.SoftLimitConfig;
 import edu.wpi.first.wpilibj.TimedRobot;
 import edu.wpi.first.wpilibj.smartdashboard.SendableChooser;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
+import frc.robot.subsystems.Elevator;
 import frc.robot.subsystems.Grabber;
+import frc.robot.subsystems.Intake;
+import frc.robot.subsystems.SuperStruct;
 import edu.wpi.first.wpilibj.shuffleboard.Shuffleboard;
 import edu.wpi.first.wpilibj.shuffleboard.ShuffleboardTab;
 import edu.wpi.first.networktables.GenericEntry;
+import edu.wpi.first.wpilibj2.command.Command;
+import frc.robot.commands.TeleopSuperStruct;
 
 import java.util.Map;
 
@@ -34,6 +39,10 @@ public class Robot extends TimedRobot {
   private final SendableChooser<String> m_chooser = new SendableChooser<>();
  
   private final Grabber m_grabber = new Grabber();
+  private final Intake m_intake = new Intake();
+  private final Elevator m_elevator = new Elevator();
+  private final SuperStruct m_superStruct = SuperStruct.getInstance();
+  private Command m_teleopSuperStruct;
 
   /**
    * This function is run when the robot is first started up and should be used for any
@@ -48,7 +57,10 @@ public class Robot extends TimedRobot {
     
   }
 
- 
+  @Override
+  public void robotInit() {
+    m_teleopSuperStruct = new TeleopSuperStruct(m_superStruct);
+  }
 
   /**
    * This function is called every 20 ms, no matter the mode. Use this for items like diagnostics
@@ -59,7 +71,10 @@ public class Robot extends TimedRobot {
    */
   @Override
   public void robotPeriodic() {
-    m_grabber.periodic();  // Subsystem handles everything now!
+    m_grabber.periodic(); 
+    m_intake.periodic();
+    m_elevator.periodic();
+    m_superStruct.periodic();
   }
 
   /**
@@ -95,7 +110,15 @@ public class Robot extends TimedRobot {
 
   /** This function is called once when teleop is enabled. */
   @Override
-  public void teleopInit() {}
+  public void teleopInit() {
+    m_teleopSuperStruct.schedule();
+  }
+
+  /** This function is called once when teleop is disabled. */
+  @Override
+  public void teleopExit() {
+    m_teleopSuperStruct.cancel();
+  }
 
   /** This function is called periodically during operator control. */
   @Override
