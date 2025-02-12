@@ -15,7 +15,11 @@ import com.revrobotics.spark.config.SparkBaseConfig.IdleMode;
 import com.revrobotics.spark.config.SparkMaxConfig;
 
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
+
+import com.ctre.phoenix6.configs.CANcoderConfiguration;
 import com.ctre.phoenix6.hardware.CANcoder;
+import com.ctre.phoenix6.signals.SensorDirectionValue;
+
 import edu.wpi.first.networktables.GenericEntry;
 import edu.wpi.first.networktables.NetworkTable;
 import edu.wpi.first.networktables.NetworkTableInstance;
@@ -23,28 +27,39 @@ import edu.wpi.first.networktables.StringPublisher;
 import edu.wpi.first.wpilibj.shuffleboard.Shuffleboard;
 import edu.wpi.first.wpilibj.shuffleboard.ShuffleboardTab;
 import edu.wpi.first.math.controller.PIDController;
+import java.util.Map;
+import frc.robot.states.SuperStructState;
 
-public class ElevatorSubsystem extends SubsystemBase {
+public class Elevator extends SubsystemBase {
   private final SparkMax leftMotor;
   private final SparkMax rightMotor;
-  // private final CANcoder encoder;
+  // private final CANcoder Cancoder;
   
   private static final double kG = 0.05; // Gravity feed forward constant - adjust this!
   private static final double kDownSpeedMultiplier = 0.5; // Reduces down speed - adjust this!
 
+  private static Elevator mInstance = null;
+    
+  public static synchronized Elevator getInstance() {
+      if (mInstance == null) {
+          mInstance = new Elevator();
+      }
+      return mInstance;
+  }
+
   // Shuffleboard entries
   private final ShuffleboardTab elevatorTab = Shuffleboard.getTab("Elevator");
-  private final GenericEntry upButton = elevatorTab.add("Elevator Up", false)
-      .withWidget("Toggle Button")
-      .withPosition(0, 0)
-      .withSize(1, 1)
-      .getEntry();
+  // private final GenericEntry upButton = elevatorTab.add("Elevator Up", false)
+  //     .withWidget("Toggle Button")
+  //     .withPosition(0, 0)
+  //     .withSize(1, 1)
+  //     .getEntry();
       
-  private final GenericEntry downButton = elevatorTab.add("Elevator Down", false)
-      .withWidget("Toggle Button")
-      .withPosition(1, 0)
-      .withSize(1, 1)
-      .getEntry();
+  // private final GenericEntry downButton = elevatorTab.add("Elevator Down", false)
+  //     .withWidget("Toggle Button")
+  //     .withPosition(1, 0)
+  //     .withSize(1, 1)
+  //     .getEntry();
 
   // Add these with other instance variables at the top
   private final GenericEntry speedEntry;
@@ -58,21 +73,24 @@ public class ElevatorSubsystem extends SubsystemBase {
   private final GenericEntry maxLeftRotationsEntry;
   private final GenericEntry maxRightRotationsEntry;
 
-
-
   private final PIDController pidController = new PIDController(0.07, 0.035, 0.007);  // Adjust P, I, D values!
   private boolean positionLocked = false;
   private double targetPosition = 0.0;
   private final GenericEntry lockButton;
 
+  
+  private final CANcoder elevatorCoder;
+  private static final double CANCODER_OFFSET = 0.0; // Adjust this value! uwu
+  private final GenericEntry absolutePositionEntry;
+
   /** Creates a new ElevatorSubsystem. */
-  public ElevatorSubsystem() {
-    leftMotor = new SparkMax(4, MotorType.kBrushless);  // Update ID as needed
-    rightMotor = new SparkMax(5, MotorType.kBrushless); // Update ID as needed
-    // encoder = new CANcoder(3);  // Update CANcoder ID as needed!
+  public Elevator() {
+    leftMotor = new SparkMax(28, MotorType.kBrushless);  // Update ID as needed
+    rightMotor = new SparkMax(27, MotorType.kBrushless); // Update ID as needed
+    // Cancoder = new CANcoder(7, "rio");  // Update CANcoder ID as needed!
     
-    configureNEO(leftMotor, false);   // Invert both motors to make default direction clockwise
-    configureNEO(rightMotor, false);  // Both motors still turn the same way
+    configureNEO(leftMotor,   false, false);   // Invert both motors to make default direction clockwise
+    configureNEO(rightMotor, false, false);  // Both motors still turn the same way
 
     // Set position conversion factor for encoder
 
@@ -109,20 +127,27 @@ public class ElevatorSubsystem extends SubsystemBase {
         .withSize(1, 1)
         .getEntry();
 
-       
-        // or
+    // // Initialize CANcoder (ID 3 from your existing code)
+    elevatorCoder = new CANcoder(7);
+    configureCANcoder();
+    
+    // Add absolute position display to dashboard
+    absolutePositionEntry = elevatorTab.add("Elevator Absolute Position", 0.0)
+        .withPosition(0, 7)
+        .withSize(2, 1)
+        .getEntry();
   }
 
-  private void configureNEO(SparkMax motor, boolean inverted) {
+  private void configureNEO(SparkMax motor, boolean inverted, boolean softlimit) {
     SparkMaxConfig neoConfig = new SparkMaxConfig();
     
     // Create soft limit config for elevator
     SoftLimitConfig softLimitConfig = new SoftLimitConfig();
     softLimitConfig
         .forwardSoftLimit(28)     // Adjust these limits for your elevator!
-        .forwardSoftLimitEnabled(true)
+        .forwardSoftLimitEnabled(softlimit)
         .reverseSoftLimit(0.0)     // Bottom position
-        .reverseSoftLimitEnabled(true);
+        .reverseSoftLimitEnabled(softlimit);
     
     neoConfig
         .smartCurrentLimit(40)
@@ -140,6 +165,62 @@ public class ElevatorSubsystem extends SubsystemBase {
     motor.setCANTimeout(250);
     motor.configure(neoConfig, ResetMode.kResetSafeParameters, PersistMode.kPersistParameters);
     motor.getEncoder().setPosition(0.0);  // Reset encoder to zero
+  }
+
+  /**
+   * Configure the CANcoder for absolute position reading (◕ᴗ◕✿)
+   */
+  private void configureCANcoder() {
+    CANcoderConfiguration config = new CANcoderConfiguration();
+    
+    // Configure for absolute position mode
+    config.MagnetSensor.SensorDirection = SensorDirectionValue.CounterClockwise_Positive;
+    config.MagnetSensor.MagnetOffset = 0.0;
+    
+    // Apply configuration
+    elevatorCoder.getConfigurator().apply(config);
+    elevatorCoder.setPosition(0);
+    // Wait for config to apply
+    try {
+        Thread.sleep(100);
+    } catch (InterruptedException e) {
+        e.printStackTrace();
+    }
+  }
+
+  /**
+   * Get the absolute position from CANcoder! (✿◠‿◠)
+   */
+  public double getPosition() {
+    return elevatorCoder.getPosition().getValueAsDouble();
+  }
+
+  public void setPosition(double targetPosition) {
+    // Update PID setpoint
+    pidController.setSetpoint(targetPosition);
+    
+    // Calculate PID output
+    double currentPosition = leftMotor.getEncoder().getPosition();
+    double pidOutput = pidController.calculate(currentPosition);
+    
+    // Add gravity compensation
+    double gravityCompensation = (pidOutput >= 0) ? kG : 0.0;
+    
+    // Set motor output
+    setElevatorSpeed(pidOutput + gravityCompensation);
+}
+
+public boolean isAtPosition() {
+  double currentPosition = leftMotor.getEncoder().getPosition();
+  return Math.abs(currentPosition - pidController.getSetpoint()) < 0.1;
+}
+  /**
+   * Reset the NEO encoders based on CANcoder position ʕ•ᴥ•ʔ
+   */
+  public void resetToAbsolute() {
+    double absolutePosition = getPosition();
+    leftMotor.getEncoder().setPosition(absolutePosition);
+    rightMotor.getEncoder().setPosition(absolutePosition);
   }
 
   /** 
@@ -190,16 +271,11 @@ public class ElevatorSubsystem extends SubsystemBase {
     positionLocked = false;
   }
 
+  
+
   @Override
   public void periodic() {
-    // Check for negative position and reset if needed
-    if (leftMotor.getEncoder().getPosition() < 0) {
-      leftMotor.getEncoder().setPosition(0.0);
-    }
-    if (rightMotor.getEncoder().getPosition() < 0) {
-      rightMotor.getEncoder().setPosition(0.0);
-    }
-
+    
     // Handle position locking
     if (lockButton.getBoolean(false)) {
       if (!positionLocked) {
@@ -214,21 +290,14 @@ public class ElevatorSubsystem extends SubsystemBase {
         unlockPosition();
       }
       // Normal button control
-      if (upButton.getBoolean(false)) {
-        up();
-      } else if (downButton.getBoolean(false)) {
-        down();
-      } else {
-        stop();
-      }
+      // if (upButton.getBoolean(false)) {
+      //   up();
+      // } else if (downButton.getBoolean(false)) {
+      //   down();
+      // } else {
+      //   stop();
+      // }
     }
-
-    // Update values instead of creating new widgets
-    speedEntry.setDouble(leftMotor.get());
-    // positionEntry.setDouble(encoder.getPosition().getValueAsDouble()); //cancoder
-    positionEntry.setDouble(leftMotor.getEncoder().getPosition()); // encoder
-    leftRotationsEntry.setDouble(leftMotor.getEncoder().getPosition());
-    rightRotationsEntry.setDouble(rightMotor.getEncoder().getPosition());
 
     // Track maximum rotations
     double leftRotations = Math.abs(leftMotor.getEncoder().getPosition());
@@ -240,5 +309,18 @@ public class ElevatorSubsystem extends SubsystemBase {
     // Update max rotation displays
     maxLeftRotationsEntry.setDouble(maxLeftRotations);
     maxRightRotationsEntry.setDouble(maxRightRotations);
+
+    // State machine control (✿◠‿◠)
+    double currentHeight = leftMotor.getEncoder().getPosition();
+    double pidOutput = pidController.calculate(currentHeight);
+    
+    // Add gravity compensation! ˎ₍•ʚ•₎ˏ
+    double gravityCompensation = kG;
+    
+        setElevatorSpeed(pidOutput + gravityCompensation);
+    
+
+    // Update absolute position display
+    absolutePositionEntry.setDouble(getPosition());
   }
 }
