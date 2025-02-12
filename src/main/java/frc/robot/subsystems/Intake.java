@@ -24,7 +24,7 @@ public class Intake extends SubsystemBase {
 
     private static Intake mInstance = null;
 
-    public static Intake getInstance() {
+    public static synchronized Intake getInstance() {
         if (mInstance == null) {
             mInstance = new Intake();
         }
@@ -71,8 +71,8 @@ public class Intake extends SubsystemBase {
         .getEntry();
 
     public Intake() {
-        up = new SparkMax(2, MotorType.kBrushless);
-        down = new SparkMax(3, MotorType.kBrushless);
+        up = new SparkMax(18, MotorType.kBrushless);
+        down = new SparkMax(19, MotorType.kBrushless);
         
         configureNEO550(up);
         configureNEO550(down);
@@ -94,8 +94,7 @@ public class Intake extends SubsystemBase {
 
     @Override
     public void periodic() {
-       
-
+    
         // Manual control through Shuffleboard
         boolean upButtonState = upButton.getBoolean(false);
         boolean downButtonState = downButton.getBoolean(false);

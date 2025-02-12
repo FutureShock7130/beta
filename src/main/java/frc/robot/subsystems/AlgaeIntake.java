@@ -19,7 +19,11 @@ import com.ctre.phoenix6.signals.SensorDirectionValue;
 
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import edu.wpi.first.math.controller.PIDController;
+import edu.wpi.first.networktables.GenericEntry;
 import edu.wpi.first.math.MathUtil;
+import edu.wpi.first.wpilibj.shuffleboard.BuiltInWidgets;
+import edu.wpi.first.wpilibj.shuffleboard.Shuffleboard;
+import edu.wpi.first.wpilibj.shuffleboard.ShuffleboardTab;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 
 public class AlgaeIntake extends SubsystemBase {
@@ -27,15 +31,19 @@ public class AlgaeIntake extends SubsystemBase {
   private final SparkMax rightAngle;
   private final CANcoder angleEncoder;
   private final SparkMax intakeMotor;
+  private final SparkMax duckMotor;
   private final PIDController anglePIDController;
-  private static final double ANGLE_kP = 0.01;    // Adjust these PID values! uwu
+  private static final double ANGLE_kP = 1.1;    // Adjust these PID values! uwu
   private static final double ANGLE_kI = 0.0;
   private static final double ANGLE_kD = 0.0;
   private static final double ANGLE_TOLERANCE = 2.0; // Degrees
 
+  private final ShuffleboardTab algaeIntakeTab = Shuffleboard.getTab("AlgaeInatke");
+  private final GenericEntry angleDisplay;
+
   private static AlgaeIntake mInstance = null;
     
-  public static AlgaeIntake getInstance() {
+  public static synchronized AlgaeIntake getInstance() {
       if (mInstance == null) {
           mInstance = new AlgaeIntake();
       }
@@ -44,19 +52,25 @@ public class AlgaeIntake extends SubsystemBase {
 
   /** Creates a new AlgaeIntake. */
   public AlgaeIntake() {
-    leftAngle = new SparkMax(10, MotorType.kBrushless);
-    rightAngle = new SparkMax(11, MotorType.kBrushless);
-    angleEncoder = new CANcoder(12, "GTX7130");
-    intakeMotor = new SparkMax(13, MotorType.kBrushless);
+    leftAngle = new SparkMax(38, MotorType.kBrushless);
+    rightAngle = new SparkMax(37, MotorType.kBrushless);
+    angleEncoder = new CANcoder(5, "GTX7130");
+    intakeMotor = new SparkMax(36, MotorType.kBrushless);
+    duckMotor = new SparkMax(39, MotorType.kBrushless);
 
-    configureNEO(leftAngle, false, true);
-    configureSlaveNEO(rightAngle, false, true);
+    configureNEO(leftAngle, true, false);
+    configureSlaveNEO(rightAngle, false, false);
     configureNEO(intakeMotor, false, false);
     configureCANcoder();
 
     // Initialize angle PID controller
     anglePIDController = new PIDController(ANGLE_kP, ANGLE_kI, ANGLE_kD);
     anglePIDController.setTolerance(ANGLE_TOLERANCE);
+
+    angleDisplay = algaeIntakeTab.add("Current Angle", 0.0)
+      .withWidget(BuiltInWidgets.kTextView)
+      .withPosition(2, 4)
+      .getEntry();
   }
 
   public void configureNEO(SparkMax motor, boolean inverted, boolean softlimit) {

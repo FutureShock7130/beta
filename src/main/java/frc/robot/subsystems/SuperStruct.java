@@ -22,7 +22,7 @@ public class SuperStruct extends SubsystemBase {
 
   private static SuperStruct mInstance = null;
 
-  public static SuperStruct getInstance() {
+  public static synchronized SuperStruct getInstance() {
       if (mInstance == null) {
           mInstance = new SuperStruct();
       }
@@ -66,23 +66,23 @@ public class SuperStruct extends SubsystemBase {
   }
 
   public void CS() {
-    mElevator.setPosition(0);
-    mGrabber.setAngle(0);
+    // mElevator.setPosition(0);
+    mGrabber.setAngle(-0.19335);
     mIntake.intake();
   }
 
   public void PLACEMENT() {
-    mElevator.setPosition(0);
-    mGrabber.setAngle(0);
+    // mElevator.setPosition(0);
+    // mGrabber.setAngle(0);
     mIntake.setSpeed(0.3);
   }
 
   public void DEFAULT() {
-    mElevator.setPosition(0);
+    // mElevator.setPosition(0);
     mGrabber.setAngle(0);
     mIntake.setSpeed(0);
     mAlgaeIntake.setIntakeSpeed(0);
-    mAlgaeIntake.setAngle(0);
+    mAlgaeIntake.setAngle(-0.403076);
   }
 
   public void ALGAE_STOWAGE() {
@@ -92,8 +92,9 @@ public class SuperStruct extends SubsystemBase {
   }
 
   public void ALGAE_INTAKE() {
-    mElevator.setPosition(0);
-    mGrabber.setAngle(0);
+    // mElevator.setPosition(0);
+    // mGrabber.setAngle(0);
+    mAlgaeIntake.setAngle(-0.198965);
     mAlgaeIntake.intake();
   }
 
@@ -169,7 +170,7 @@ public class SuperStruct extends SubsystemBase {
     else if (controller.getRightBumperButton()) {
       setState(SuperStructState.TRAVEL);
     }
-    // Left bumper - CS (Charging Station)
+    // Left bumper - CS (CORAL Station)
     else if (controller.getLeftBumperButton()) {
       setState(SuperStructState.CS);
     }

@@ -1,5 +1,9 @@
 package frc.robot.subsystems;
 
+import com.ctre.phoenix6.configs.CANcoderConfiguration;
+import com.ctre.phoenix6.hardware.CANcoder;
+import com.ctre.phoenix6.signals.SensorDirectionValue;
+import com.revrobotics.jni.CANCommonJNI;
 import com.revrobotics.spark.*;
 import com.revrobotics.spark.SparkBase.PersistMode;
 import com.revrobotics.spark.SparkBase.ResetMode;
@@ -19,10 +23,11 @@ import edu.wpi.first.math.controller.PIDController;
 public class Grabber extends SubsystemBase {
     private final SparkMax angle;
     private static final double DEFAULT_KG = 0.003;
+    private final CANcoder cancoder;
 
     private static Grabber mInstance = null;
 
-    public static Grabber getInstance() {
+    public static synchronized Grabber getInstance() {
         if (mInstance == null) {
             mInstance = new Grabber();
         }
@@ -37,9 +42,11 @@ public class Grabber extends SubsystemBase {
     private final PIDController pidController;
 
     public Grabber() {
-        angle = new SparkMax(1, MotorType.kBrushless);
-        configureNEO(angle, false, true);
+        angle = new SparkMax(17, MotorType.kBrushless);
+        configureNEO(angle, true, true);
         angle.getEncoder().setPosition(0.0);
+        cancoder = new CANcoder(4);
+        configureCANcoder();
 
         // Initialize Shuffleboard entries
         angleDisplay = grabberTab.add("Current Angle", 0.0)
@@ -58,16 +65,16 @@ public class Grabber extends SubsystemBase {
             .withPosition(2, 0)
             .getEntry();
 
-        pidController = new PIDController(0.07, 0.035, 0.007);
+        pidController = new PIDController(0.69, 0.035, 0.007);
     }
 
     /**
      * Sets the grabber to a specific angle (✿◠‿◠)
      * @param targetAngleDegrees The desired angle in degrees
      */
-    public void setAngle(double targetAngleDegrees) {
+    public void setAngle(double targetRotations) {
         // Convert degrees to motor rotations (18.75:1 gear ratio)
-        double targetRotations = targetAngleDegrees * (18.75 / 360.0);
+        // double targetRotations = targetAngleDegrees * (18.75 / 360.0); // encoder
         
         // Update PID setpoint
         pidController.setSetpoint(targetRotations);
@@ -78,20 +85,21 @@ public class Grabber extends SubsystemBase {
      * @return true if at target angle, false otherwise
      */
     public boolean isAtTargetAngle() {
-        double currentAngle = angle.getEncoder().getPosition();
+        // double currentAngle = angle.getEncoder().getPosition(); //encoder
+        double currentAngle = cancoder.getAbsolutePosition().getValueAsDouble();
         return Math.abs(currentAngle - pidController.getSetpoint()) < 0.1;
     }
 
     @Override
     public void periodic() {
-        double currentAngle = angle.getEncoder().getPosition();
+        double currentAngle = cancoder.getAbsolutePosition().getValueAsDouble();
         double kG = kGTuner.getDouble(DEFAULT_KG);
 
         // Use PID to maintain target angle
         angle.set(pidController.calculate(currentAngle) + kG);
 
         // Update displays
-        double currentAngleDegrees = angle.getEncoder().getPosition() * (360.0 / 18.75);
+        double currentAngleDegrees = cancoder.getAbsolutePosition().getValueAsDouble() * (360.0 / 18.75);
         angleDisplay.setDouble(currentAngleDegrees);
     }
 
@@ -101,9 +109,9 @@ public class Grabber extends SubsystemBase {
     // Create soft limit config 
         SoftLimitConfig softLimitConfig = new SoftLimitConfig();
         softLimitConfig
-            .forwardSoftLimit(2.76)    // +53 degrees with 18.75:1
+            .forwardSoftLimit(0)    // +53 degrees with 18.75:1
             .forwardSoftLimitEnabled(softlimit)
-            .reverseSoftLimit(0)       // Keep starting point
+            .reverseSoftLimit(-2.76)       // Keep starting point
             .reverseSoftLimitEnabled(softlimit);
     
         neoConfig
@@ -117,5 +125,27 @@ public class Grabber extends SubsystemBase {
         
         motor.setCANTimeout(250);
         motor.configure(neoConfig, ResetMode.kResetSafeParameters, PersistMode.kPersistParameters);
+    }
+
+    /**
+     * Configure the CANcoder for absolute position reading (◕ᴗ◕✿)
+     */
+    private void configureCANcoder() {
+        CANcoderConfiguration config = new CANcoderConfiguration();
+        
+        // Configure for absolute position mode
+        config.MagnetSensor.SensorDirection = SensorDirectionValue.CounterClockwise_Positive;
+        config.MagnetSensor.MagnetOffset = 0.0;
+        
+        // Apply configuration
+        cancoder.getConfigurator().apply(config);
+        cancoder.setPosition(0);
+        
+        // Wait for config to apply
+        try {
+            Thread.sleep(100);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
     }
 } 
