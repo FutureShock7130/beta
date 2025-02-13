@@ -19,10 +19,9 @@ import edu.wpi.first.networktables.GenericEntry;
 import java.util.Map;
 import edu.wpi.first.math.controller.PIDController;
 
-
 public class Grabber extends SubsystemBase {
     private final SparkMax angle;
-    private static final double DEFAULT_KG = 0.003;
+    private static final double kG = -0.003;
     private final CANcoder cancoder;
 
     private static Grabber mInstance = null;
@@ -37,9 +36,56 @@ public class Grabber extends SubsystemBase {
     // Shuffleboard entries for angle control only
     private final ShuffleboardTab grabberTab = Shuffleboard.getTab("Grabber");
     private final GenericEntry angleDisplay;
-    private final GenericEntry kGTuner;
-    private final GenericEntry stateDisplay;
     private final PIDController pidController;
+
+    // Add to your existing Shuffleboard entries
+    private final GenericEntry upButton = grabberTab.add("Grabber Up", false)
+        .withWidget("Toggle Button")
+        .withPosition(0, 0)
+        .withSize(1, 1)
+        .getEntry();
+        
+    private final GenericEntry downButton = grabberTab.add("Grabber Down", false)
+        .withWidget("Toggle Button")
+        .withPosition(1, 0)
+        .withSize(1, 1)
+        .getEntry();
+        
+    private final GenericEntry stopButton = grabberTab.add("Grabber Stop", false)
+        .withWidget("Toggle Button")
+        .withPosition(2, 0)
+        .withSize(1, 1)
+        .getEntry();
+        
+    private final GenericEntry speedSlider = grabberTab.add("Manual Speed", 0.05)
+        .withWidget("Number Slider")
+        .withProperties(Map.of("min", -1.0, "max", 1.0))
+        .withPosition(0, 1)
+        .withSize(3, 1)
+        .getEntry();
+
+    private final GenericEntry CSButton = grabberTab.add("cs", false)
+    .withWidget("Toggle Button")
+    .withProperties(Map.of("min", -1.0, "max", 1.0))
+    .withPosition(0, 2)
+    .withSize(3, 1)
+    .getEntry();
+    // Add these variables
+    private double maxRotations = 0.0;
+
+    
+    
+    // Add to your Shuffleboard entries
+    private final GenericEntry maxRotationsEntry = grabberTab.add("Max Motor Rotations", 0.0)
+        .withPosition(0, 5)
+        .withSize(2, 1)
+        .getEntry();
+        
+    private final GenericEntry resetMaxButton = grabberTab.add("Reset Max", false)
+        .withWidget("Toggle Button")
+        .withPosition(2, 5)
+        .withSize(1, 1)
+        .getEntry();
 
     public Grabber() {
         angle = new SparkMax(17, MotorType.kBrushless);
@@ -50,38 +96,40 @@ public class Grabber extends SubsystemBase {
 
         // Initialize Shuffleboard entries
         angleDisplay = grabberTab.add("Current Angle", 0.0)
-            .withWidget("Text View")
-            .withPosition(2, 4)
-            .getEntry();
+                .withWidget("Text View")
+                .withPosition(2, 4)
+                .getEntry();
 
-        kGTuner = grabberTab.add("Gravity Compensation", DEFAULT_KG)
-            .withWidget("Number Slider")
-            .withProperties(Map.of("min", 0.0, "max", 0.2))
-            .withPosition(3, 4)
-            .getEntry();
 
-        stateDisplay = grabberTab.add("Current State", "DEFAULT")
-            .withWidget("Text View")
-            .withPosition(2, 0)
-            .getEntry();
+        pidController = new PIDController(0.0069, 0.035, 0.007);
+    }
 
-        pidController = new PIDController(0.69, 0.035, 0.007);
+    public void setSpeed(double speed) {
+        // Add gravity feedforward when moving up
+        double gravityCompensation = (speed >= 0) ? kG : 0.0;
+
+        // Reduce speed when moving down
+        angle.set(speed + gravityCompensation);
     }
 
     /**
      * Sets the grabber to a specific angle (✿◠‿◠)
+     * 
      * @param targetAngleDegrees The desired angle in degrees
      */
     public void setAngle(double targetRotations) {
         // Convert degrees to motor rotations (18.75:1 gear ratio)
         // double targetRotations = targetAngleDegrees * (18.75 / 360.0); // encoder
-        
+
         // Update PID setpoint
         pidController.setSetpoint(targetRotations);
+
+        setSpeed(pidController.calculate(cancoder.getAbsolutePosition().getValueAsDouble()));
     }
 
     /**
      * Checks if the grabber is at the target angle (◕ᴗ◕✿)
+     * 
      * @return true if at target angle, false otherwise
      */
     public boolean isAtTargetAngle() {
@@ -93,36 +141,68 @@ public class Grabber extends SubsystemBase {
     @Override
     public void periodic() {
         double currentAngle = cancoder.getAbsolutePosition().getValueAsDouble();
-        double kG = kGTuner.getDouble(DEFAULT_KG);
+        // double kG = kGTuner.getDouble(0.003);
 
         // Use PID to maintain target angle
-        angle.set(pidController.calculate(currentAngle) + kG);
+        // angle.set(pidController.calculate(currentAngle) + kG);
+
+        // Handle manual control buttons
+        if (upButton.getBoolean(false)) {
+            // double speed = speedSlider.getDouble(0.05);
+            // setSpeed(-0.01);
+            setAngle(-0.1);
+        } 
+        else if (downButton.getBoolean(false)) {
+            // double speed = -speedSlider.getDouble(0.3);
+            setSpeed(0.01);
+        }
+        else if (stopButton.getBoolean(false)) {
+            setSpeed(0);
+        }
+        else if (CSButton.getBoolean(false)) {
+            setAngle(-0.18635);
+        }
+
+        // Track maximum rotations
+        double currentRotations = angle.getEncoder().getPosition();
+        if (Math.abs(currentRotations) > Math.abs(maxRotations)) {
+            maxRotations = currentRotations;
+            maxRotationsEntry.setDouble(maxRotations);
+        }
+
+        
 
         // Update displays
         double currentAngleDegrees = cancoder.getAbsolutePosition().getValueAsDouble() * (360.0 / 18.75);
-        angleDisplay.setDouble(currentAngleDegrees);
+        angleDisplay.setDouble(currentAngle);
+        SmartDashboard.putNumber("pidoutput grab", pidController.calculate(currentAngle));
+        SmartDashboard.putNumber("Grabber Current Angle", 
+            cancoder.getAbsolutePosition().getValueAsDouble() );
+        SmartDashboard.putNumber("Grabber Target Angle", 
+            pidController.getSetpoint());
+        SmartDashboard.putBoolean("At Target Angle", 
+            isAtTargetAngle());
     }
 
     private void configureNEO(SparkMax motor, boolean inverted, boolean softlimit) {
         SparkMaxConfig neoConfig = new SparkMaxConfig();
-        
-    // Create soft limit config 
+
+        // Create soft limit config
         SoftLimitConfig softLimitConfig = new SoftLimitConfig();
         softLimitConfig
-            .forwardSoftLimit(0)    // +53 degrees with 18.75:1
-            .forwardSoftLimitEnabled(softlimit)
-            .reverseSoftLimit(-2.76)       // Keep starting point
-            .reverseSoftLimitEnabled(softlimit);
-    
+                .forwardSoftLimit(0) // +53 degrees with 18.75:1
+                .forwardSoftLimitEnabled(softlimit)
+                .reverseSoftLimit(-3) // Keep starting point
+                .reverseSoftLimitEnabled(softlimit);
+
         neoConfig
-            .smartCurrentLimit(40)
-            .idleMode(IdleMode.kBrake)
-            .voltageCompensation(12.0)
-            .openLoopRampRate(0.1)
-            .apply(softLimitConfig)
-            .inverted(inverted);   // Flips motor direction
-        
-        
+                .smartCurrentLimit(40)
+                .idleMode(IdleMode.kBrake)
+                .voltageCompensation(12.0)
+                .openLoopRampRate(0.1)
+                .apply(softLimitConfig)
+                .inverted(inverted); // Flips motor direction
+
         motor.setCANTimeout(250);
         motor.configure(neoConfig, ResetMode.kResetSafeParameters, PersistMode.kPersistParameters);
     }
@@ -132,15 +212,10 @@ public class Grabber extends SubsystemBase {
      */
     private void configureCANcoder() {
         CANcoderConfiguration config = new CANcoderConfiguration();
-        
-        // Configure for absolute position mode
-        config.MagnetSensor.SensorDirection = SensorDirectionValue.CounterClockwise_Positive;
-        config.MagnetSensor.MagnetOffset = 0.0;
-        
+
         // Apply configuration
         cancoder.getConfigurator().apply(config);
-        cancoder.setPosition(0);
-        
+
         // Wait for config to apply
         try {
             Thread.sleep(100);
@@ -148,4 +223,4 @@ public class Grabber extends SubsystemBase {
             e.printStackTrace();
         }
     }
-} 
+}

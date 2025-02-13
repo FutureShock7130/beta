@@ -82,10 +82,10 @@ public class Robot extends TimedRobot {
    */
   @Override
   public void robotPeriodic() {
-    m_grabber.periodic();
-    m_intake.periodic();
-    m_elevator.periodic();
-    m_algaeIntake.periodic();
+    // m_grabber.periodic();
+    // m_intake.periodic();
+    // m_elevator.periodic();
+    // m_algaeIntake.periodic();
     m_superStruct.periodic();
     CommandScheduler.getInstance().run();
   }

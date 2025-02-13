@@ -6,10 +6,21 @@ package frc.robot.subsystems;
 
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
+import edu.wpi.first.wpilibj2.command.button.JoystickButton;
 import frc.robot.states.StateMachine;
 import frc.robot.states.SuperStructState;
 import edu.wpi.first.wpilibj.XboxController;
+import edu.wpi.first.wpilibj.Joystick;
+import edu.wpi.first.wpilibj2.command.Commands;
 
+
+//ele
+//-2.8291015625 L2
+//-4.19677734375 L3
+//-4.8359375 L4
+
+//grabber
+//-0.312 L4
 public class SuperStruct extends SubsystemBase {
   Elevator mElevator;
   Grabber mGrabber;
@@ -18,7 +29,9 @@ public class SuperStruct extends SubsystemBase {
   StateMachine mStateMachine;
   SuperStructState mCommandedState;
   private final XboxController controller;
-  private static final int CONTROLLER_PORT = 0; // Adjust port as needed! uwu
+  private static final int CONTROLLER_PORT = 3; 
+  private final Joystick buttonBoard1;
+  private final Joystick buttonBoard2;
 
   private static SuperStruct mInstance = null;
 
@@ -37,71 +50,148 @@ public class SuperStruct extends SubsystemBase {
     mStateMachine = StateMachine.getInstance();
     mCommandedState = SuperStructState.DEFAULT;
     controller = new XboxController(CONTROLLER_PORT);
+    buttonBoard1 = new Joystick(0);  // First port
+    buttonBoard2 = new Joystick(1);  // Second port
+    configureButtonBindings();
+  }
+
+  private void configureButtonBindings() {
+    // First button board (Port 0) - State Controls
+    new JoystickButton(buttonBoard1, 1)
+        .onTrue(Commands.runOnce(
+            () -> setState(SuperStructState.L1),
+            this
+        ));
+
+    new JoystickButton(buttonBoard1, 2)
+        .onTrue(Commands.runOnce(
+            () -> setState(SuperStructState.L2),
+            this
+        ));
+
+    new JoystickButton(buttonBoard1, 3)
+        .onTrue(Commands.runOnce(
+            () -> setState(SuperStructState.L3),
+            this
+        ));
+
+    new JoystickButton(buttonBoard1, 4)
+        .onTrue(Commands.runOnce(
+            () -> setState(SuperStructState.L4),
+            this
+        ));
+
+    new JoystickButton(buttonBoard1, 5)
+        .onTrue(Commands.runOnce(
+            () -> setState(SuperStructState.TRAVEL),
+            this
+        ));
+
+    new JoystickButton(buttonBoard1, 6)
+        .onTrue(Commands.runOnce(
+            () -> setState(SuperStructState.CS),
+            this
+        ));
+
+    new JoystickButton(buttonBoard1, 7)
+        .onTrue(Commands.runOnce(
+            () -> setState(SuperStructState.PLACEMENT),
+            this
+        ));
+
+    new JoystickButton(buttonBoard1, 8)
+        .onTrue(Commands.runOnce(
+            () -> setState(SuperStructState.DEFAULT),
+            this
+        ));
+
+    // Second button board (Port 1) - Algae States
+    new JoystickButton(buttonBoard2, 1)
+        .onTrue(Commands.runOnce(
+            () -> setState(SuperStructState.ALGAE_STOWAGE),
+            this
+        ));
+
+    new JoystickButton(buttonBoard2, 2)
+        .onTrue(Commands.runOnce(
+            () -> setState(SuperStructState.ALGAE_INTAKE),
+            this
+        ));
+
+    new JoystickButton(buttonBoard2, 3)
+        .onTrue(Commands.runOnce(
+            () -> setState(SuperStructState.ALGAE_PLACEMENT),
+            this
+        ));
+
+    // ... remaining buttons can be used for manual overrides if needed
   }
 
   public void L1() {
-    mElevator.setPosition(0);
-    mGrabber.setAngle(0);
+    // mElevator.setPosition(0);
+    // mGrabber.setAngle(-0.1);
   }
 
   public void L2() {
-    mElevator.setPosition(0);
-    mGrabber.setAngle(0);
+    // mElevator.setPosition(0);
+    mGrabber.setAngle(-0.045);
   }
 
   public void L3() {
-    mElevator.setPosition(0);
-    mGrabber.setAngle(0);
+    // mElevator.setPosition(0);
+    mGrabber.setAngle(-0.99);
   }
 
   public void L4() {
-    mElevator.setPosition(0);
-    mGrabber.setAngle(0);
+    // mElevator.setPosition(0);
+    // mGrabber.setAngle(0);
   }
 
   public void TRAVEL() {
-    mElevator.setPosition(0);
-    mGrabber.setAngle(0);
-    mIntake.setSpeed(0.01);
+    // mElevator.setPosition(0);
+    // mGrabber.setAngle(0);
+    // mIntake.setSpeed(0.01);
   }
 
   public void CS() {
-    // mElevator.setPosition(0);
-    mGrabber.setAngle(-0.19335);
-    mIntake.intake();
+    mElevator.setPosition(-2.27534);
+    mGrabber.setAngle(-0.18635);
+    // mIntake.intake();
   }
 
   public void PLACEMENT() {
     // mElevator.setPosition(0);
     // mGrabber.setAngle(0);
-    mIntake.setSpeed(0.3);
+    // mIntake.setSpeed(0.3);
   }
 
   public void DEFAULT() {
     // mElevator.setPosition(0);
-    mGrabber.setAngle(0);
+    // mGrabber.setAngle(0);
     mIntake.setSpeed(0);
     mAlgaeIntake.setIntakeSpeed(0);
     mAlgaeIntake.setAngle(-0.403076);
   }
 
   public void ALGAE_STOWAGE() {
-    mElevator.setPosition(0);
-    mGrabber.setAngle(0);
-    mAlgaeIntake.setAngle(0);
+    // mElevator.setPosition(0);
+    // mGrabber.setAngle(0);
+    mAlgaeIntake.setAngle(-0.433076);
+    mAlgaeIntake.setIntakeSpeed(-0.0);
   }
 
   public void ALGAE_INTAKE() {
     // mElevator.setPosition(0);
     // mGrabber.setAngle(0);
-    mAlgaeIntake.setAngle(-0.198965);
+    mAlgaeIntake.setAngle(-0.271973);
     mAlgaeIntake.intake();
   }
 
   public void ALGAE_PLACEMENT() {
-    mElevator.setPosition(0);
-    mGrabber.setAngle(0);
-    mAlgaeIntake.setAngle(0);
+    // mElevator.setPosition(0);
+    // mGrabber.setAngle(0);
+    mAlgaeIntake.setAngle(-0.403076);
+    mAlgaeIntake.setIntakeSpeed(0.6);
   }
 
   public void updateState() {
@@ -199,32 +289,17 @@ public class SuperStruct extends SubsystemBase {
   @Override
   public void periodic() {
     // Handle controller input first
-    handleControllerInput();
+    // handleControllerInput();
     
     // This method will be called once per scheduler run
     mCommandedState = mStateMachine.getCommandedState();
     updateState();
 
     SmartDashboard.putString("Commanded State", mCommandedState.toString());
-    // Add controller info to dashboard
-    SmartDashboard.putString("Last Button Pressed", getLastButtonPressed());
-  }
-
-  /**
-   * Helper to get last button pressed for dashboard uwu
-   */
-  private String getLastButtonPressed() {
-    if (controller.getAButton()) return "A - L1";
-    if (controller.getBButton()) return "B - L2";
-    if (controller.getYButton()) return "Y - L3";
-    if (controller.getXButton()) return "X - L4";
-    if (controller.getRightBumperButton()) return "RB - TRAVEL";
-    if (controller.getLeftBumperButton()) return "LB - CS";
-    if (controller.getStartButton()) return "Start - PLACEMENT";
-    if (controller.getBackButton()) return "Back - DEFAULT";
-    if (controller.getPOV() == 0) return "POV Up - ALGAE_STOWAGE";
-    if (controller.getPOV() == 90) return "POV Right - ALGAE_INTAKE";
-    if (controller.getPOV() == 180) return "POV Down - ALGAE_PLACEMENT";
-    return "None";
+    
+    // Add button state monitoring to SmartDashboard
+    SmartDashboard.putBoolean("Board 1 Button 1 (L1)", buttonBoard1.getRawButton(1));
+    SmartDashboard.putBoolean("Board 1 Button 2 (L2)", buttonBoard1.getRawButton(2));
+    // ... add more button states as needed ...
   }
 }

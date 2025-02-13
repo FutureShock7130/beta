@@ -41,16 +41,16 @@ public class Intake extends SubsystemBase {
         .withWidget("Toggle Button")
         .withPosition(0, 1)
         .getEntry();
-    private final GenericEntry upSpeed = intakeTab.add("Up Motor Speed", 0.5)
-        .withWidget("Number Slider")
-        .withProperties(Map.of("min", -1.0, "max", 1.0))
-        .withPosition(1, 0)
-        .getEntry();
-    private final GenericEntry downSpeed = intakeTab.add("Down Motor Speed", 0.5)
-        .withWidget("Number Slider")
-        .withProperties(Map.of("min", -1.0, "max", 1.0))
-        .withPosition(1, 1)
-        .getEntry();
+    // private final GenericEntry upSpeed = intakeTab.add("Up Motor Speed", 0.5)
+    //     .withWidget("Number Slider")
+    //     .withProperties(Map.of("min", -1.0, "max", 1.0))
+    //     .withPosition(1, 0)
+    //     .getEntry();
+    // private final GenericEntry downSpeed = intakeTab.add("Down Motor Speed", 0.5)
+    //     .withWidget("Number Slider")
+    //     .withProperties(Map.of("min", -1.0, "max", 1.0))
+    //     .withPosition(1, 1)
+    //     .getEntry();
     private final GenericEntry bothInButton = intakeTab.add("Both Motors In", false)
         .withWidget("Toggle Button")
         .withPosition(0, 5)
@@ -84,9 +84,9 @@ public class Intake extends SubsystemBase {
         SparkMaxConfig neo550Config = new SparkMaxConfig();
         neo550Config
             .smartCurrentLimit(40)
-            .idleMode(IdleMode.kCoast)
-            .voltageCompensation(12.0)
-            .openLoopRampRate(0.1);
+            .idleMode(IdleMode.kBrake)
+            .voltageCompensation(12.0);
+            
         
         motor.setCANTimeout(250);
         motor.configure(neo550Config, ResetMode.kResetSafeParameters, PersistMode.kPersistParameters);
@@ -98,19 +98,23 @@ public class Intake extends SubsystemBase {
         // Manual control through Shuffleboard
         boolean upButtonState = upButton.getBoolean(false);
         boolean downButtonState = downButton.getBoolean(false);
-        double upSpeedValue = upSpeed.getDouble(0.5);
-        double downSpeedValue = downSpeed.getDouble(0.5);
+        // double upSpeedValue = upSpeed.getDouble(0.5);
+        // double downSpeedValue = downSpeed.getDouble(0.5);
 
-        if (upButtonState) up.set(upSpeedValue);
-        if (downButtonState) down.set(downSpeedValue);
+        // if (upButtonState) up.set(upSpeedValue);
+        // if (downButtonState) down.set(downSpeedValue);
 
         // Handle synchronized movement
         if (bothOutButton.getBoolean(false)) {
-            up.set(0.3);
-            down.set(0.15);
+            up.set(0.5);
+            down.set(0.3);
         } else if (bothInButton.getBoolean(false)) {
             intake();
+            // up.set(-0.5);
+            // down.set(-0.5);
         }
+        // up.set(0.75);
+        // down.set(0.5);
 
         // Update RPM status
         updateRPMStatus();
@@ -126,26 +130,41 @@ public class Intake extends SubsystemBase {
         double downRPM = Math.abs(down.getEncoder().getVelocity());
         
         if (startupCounter < 10) {
-            up.set(-0.4);
-            down.set(-0.4);
+            up.set(-0.6);
+            down.set(-0.6);
             startupCounter++;
         } else if (upRPM < 50 || downRPM < 50) {
             if (stallCounter < 50) {
                 stallCounter++;
-                up.set(-0.4);
-                down.set(-0.4);
+                up.set(-0.6);
+                down.set(-0.6);
             } else {
-                up.set(0);
-                down.set(0);
+                up.set(-0.6);
+                down.set(-0.6);
                 bothOutButton.setBoolean(false);
                 startupCounter = 0;
                 stallCounter = 0;
             }
         } else {
             stallCounter = 0;
-            up.set(-0.4);
-            down.set(-0.4);
+            up.set(-0.6);
+            down.set(-0.6);
         }
+    }
+
+    public void stop(){
+        up.set(0);
+        down.set(0);
+    }
+
+    public void putL4(){
+        up.set(0.3);
+        down.set(0.15);
+    }
+
+    public void launchCoral(){
+        up.set(0.3);
+        down.set(0.3);
     }
 
     private void updateRPMStatus() {

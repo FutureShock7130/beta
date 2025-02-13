@@ -36,7 +36,7 @@ public class RobotContainer {
     private final Swerve m_swerve;
     private final Vision vision = new Vision();
 
-    private final CommandXboxController controller = new CommandXboxController(0);
+    private final CommandXboxController controller = new CommandXboxController(1);
 
     private final SendableChooser<Command> autoChooser;
     
