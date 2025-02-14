@@ -89,7 +89,7 @@ public class SwerveModule {
 
         double percentOutput = desiredState.speedMetersPerSecond / SwerveConstants.MAX_MODULE_SPEED;
         percentOutput = FS_Math.clamp(percentOutput, -1, 1);
-        setDriveMotor(percentOutput-0.005);
+        setDriveMotor(percentOutput);
     }
 
     private void setSteerMotor(double speed) {

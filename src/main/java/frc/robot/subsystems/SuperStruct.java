@@ -168,7 +168,7 @@ public class SuperStruct extends SubsystemBase {
   public void DEFAULT() {
     // mElevator.setPosition(0);
     // mGrabber.setAngle(0);
-    mIntake.setSpeed(0);
+    // mIntake.setSpeed(0);
     mAlgaeIntake.setIntakeSpeed(0);
     mAlgaeIntake.setAngle(-0.403076);
   }

@@ -50,7 +50,7 @@ public class Elevator extends SubsystemBase {
   }
 
   // PID Controller
-  private final PIDController pidController = new PIDController(0.069, 0.00069, 0.0069);
+  private final PIDController pidController = new PIDController(0.2, 0.0, 0.0);
 
   // State tracking
   private boolean positionLocked = false;
@@ -306,9 +306,9 @@ public class Elevator extends SubsystemBase {
       } else if (downButton.getBoolean(false)) {
         down();
       } else if (L2Button.getBoolean(false)) {
-        setPosition(-3.0091015625);
+        setPosition(-3.2091015625);
       } else if (L3Button.getBoolean(false)) {
-        setPosition(-4.44677734375);
+        setPosition(-4.58251953125);
       } else if (L4Button.getBoolean(false)) {
         setPosition(-4.8359375);
       } else if (GroundButton.getBoolean(false)) {

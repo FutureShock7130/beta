@@ -21,7 +21,7 @@ import edu.wpi.first.math.controller.PIDController;
 
 public class Grabber extends SubsystemBase {
     private final SparkMax angle;
-    private static final double kG = -0.003;
+    private static final double kG = -0.02;
     private final CANcoder cancoder;
 
     private static Grabber mInstance = null;
@@ -70,6 +70,20 @@ public class Grabber extends SubsystemBase {
     .withPosition(0, 2)
     .withSize(3, 1)
     .getEntry();
+
+    private final GenericEntry L2Button = grabberTab.add("l2", false)
+    .withWidget("Toggle Button")
+    .withProperties(Map.of("min", -1.0, "max", 1.0))
+    .withPosition(0, 3)
+    .withSize(3, 1)
+    .getEntry();
+
+    private final GenericEntry L3Button = grabberTab.add("l3", false)
+    .withWidget("Toggle Button")
+    .withProperties(Map.of("min", -1.0, "max", 1.0))
+    .withPosition(0, 4)
+    .withSize(3, 1)
+    .getEntry();
     // Add these variables
     private double maxRotations = 0.0;
 
@@ -101,14 +115,14 @@ public class Grabber extends SubsystemBase {
                 .getEntry();
 
 
-        pidController = new PIDController(0.0069, 0.035, 0.007);
+        pidController = new PIDController(0.4, 0.004, 0.02);
+        
     }
 
     public void setSpeed(double speed) {
         // Add gravity feedforward when moving up
         double gravityCompensation = (speed >= 0) ? kG : 0.0;
 
-        // Reduce speed when moving down
         angle.set(speed + gravityCompensation);
     }
 
@@ -149,18 +163,28 @@ public class Grabber extends SubsystemBase {
         // Handle manual control buttons
         if (upButton.getBoolean(false)) {
             // double speed = speedSlider.getDouble(0.05);
-            // setSpeed(-0.01);
-            setAngle(-0.1);
+            setSpeed(-0.05);
+            // setAngle(-0.1);
         } 
         else if (downButton.getBoolean(false)) {
             // double speed = -speedSlider.getDouble(0.3);
-            setSpeed(0.01);
+            setSpeed(0.02);
         }
-        else if (stopButton.getBoolean(false)) {
+        else 
+        // if (stopButton.getBoolean(false)) {
+        //     setSpeed(0);
+        // } else
+         if (CSButton.getBoolean(false)) {
+            setAngle(0.19);
+        }
+        else if (L2Button.getBoolean(false)) {
+            setAngle(0.22);
+        }
+        else if (L3Button.getBoolean(false)) {
+            setAngle(0.235);
+        }
+        else {
             setSpeed(0);
-        }
-        else if (CSButton.getBoolean(false)) {
-            setAngle(-0.18635);
         }
 
         // Track maximum rotations
@@ -192,7 +216,7 @@ public class Grabber extends SubsystemBase {
         softLimitConfig
                 .forwardSoftLimit(0) // +53 degrees with 18.75:1
                 .forwardSoftLimitEnabled(softlimit)
-                .reverseSoftLimit(-3) // Keep starting point
+                .reverseSoftLimit(-3.15) // Keep starting point
                 .reverseSoftLimitEnabled(softlimit);
 
         neoConfig

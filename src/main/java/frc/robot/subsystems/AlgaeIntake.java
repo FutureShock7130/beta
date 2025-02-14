@@ -45,10 +45,10 @@ public class AlgaeIntake extends SubsystemBase {
   private int startupCounter = 0;
   private int stallCounter = 0;
 
-  // private final ShuffleboardTab algaeIntakeTab = Shuffleboard.getTab("AlgaeInatke");
-  // private final GenericEntry angleDisplay;
-  // private final GenericEntry duckUpButton;
-  // private final GenericEntry duckDownButton;
+  private final ShuffleboardTab algaeIntakeTab = Shuffleboard.getTab("AlgaeInatke");
+  private final GenericEntry angleDisplay;
+  private final GenericEntry duckUpButton;
+  private final GenericEntry duckDownButton;
   // private final GenericEntry duckStopButton;
 
   private static AlgaeIntake mInstance = null;
@@ -79,22 +79,22 @@ public class AlgaeIntake extends SubsystemBase {
     anglePIDController.setTolerance(ANGLE_TOLERANCE);
     climbPIDController = new PIDController(CLIMB_KP, CLIMB_KI, CLIMB_KD);
 
-    // angleDisplay = algaeIntakeTab.add("Current Angle", 0.0)
-    //     .withWidget(BuiltInWidgets.kTextView)
-    //     .withPosition(2, 4)
-    //     .getEntry();
+    angleDisplay = algaeIntakeTab.add("Current Angle", 0.0)
+        .withWidget(BuiltInWidgets.kTextView)
+        .withPosition(2, 4)
+        .getEntry();
 
-    // duckUpButton = algaeIntakeTab.add("Duck Up", false)
-    //     .withWidget("Toggle Button")
-    //     .withPosition(0, 0)
-    //     .withSize(1, 1)
-    //     .getEntry();
+    duckUpButton = algaeIntakeTab.add(" Up", false)
+        .withWidget("Toggle Button")
+        .withPosition(0, 0)
+        .withSize(1, 1)
+        .getEntry();
         
-    // duckDownButton = algaeIntakeTab.add("Duck Down", false)
-    //     .withWidget("Toggle Button")
-    //     .withPosition(1, 0)
-    //     .withSize(1, 1)
-    //     .getEntry();
+    duckDownButton = algaeIntakeTab.add(" Down", false)
+        .withWidget("Toggle Button")
+        .withPosition(1, 0)
+        .withSize(1, 1)
+        .getEntry();
         
     // duckStopButton = algaeIntakeTab.add("Duck Stop", false)
     //     .withWidget("Toggle Button")
@@ -191,7 +191,11 @@ public class AlgaeIntake extends SubsystemBase {
     pidOutput = MathUtil.clamp(pidOutput, -0.4, 0.4);
 
     // Set motor outputs (both left and right angle motors)
-    leftAngle.set(pidOutput);
+    // leftAngle.set(pidOutput);
+  }
+
+  public void setSpeed(double speed) {
+    leftAngle.set(speed);
   }
 
   public void setClimbAngle(double targetAngleDegrees) {
@@ -271,17 +275,15 @@ public class AlgaeIntake extends SubsystemBase {
   public void periodic() {
     // This method will be called once per scheduler run
     // Handle manual control buttons
-    //   if (duckUpButton.getBoolean(false)) {
-    //     setDuckSpeed(0.3);
-    // } 
-    // else if (duckDownButton.getBoolean(false)) {
-    //     setDuckSpeed(-0.3);
-    // }
-    // else if (duckStopButton.getBoolean(false)) {
-    //     setDuckSpeed(0);
-    // } else {
-    //   setDuckSpeed(0);
-    // }
+      if (duckUpButton.getBoolean(false)) {
+        setSpeed(0.2);
+    } 
+    else if (duckDownButton.getBoolean(false)) {
+        setSpeed(-0.2);
+    }
+     else {
+      setSpeed(0);
+    }
 
     // Add angle info to dashboard
     SmartDashboard.putNumber("Algae Current Angle", getCurrentAngle());
